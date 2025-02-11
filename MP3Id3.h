@@ -49,23 +49,31 @@ struct TAGdata {
 
 
 
-/* ----------------------------------------------- MP3_id3 -----------------------------------------------*/
+/* ----------------------------------------------- MP3id3.h -----------------------------------------------*/
 
 class MP3_Id3 {
 public:
   bool read(File& file);
-  String getAlbum();
-  String getArtist();
-  String getGenre();
-  String getTitle();
+  bool read(char *fileName);
+  char *album();
+  char *artist();
+  char *genre();
+  char *title();
+
 private:
-  String id3_getString(File file, unsigned int len);
-  String UTF16UTF8(const char* buf, const uint32_t len);
-  String title;
-  String album;
-  String artist;
-  String genre;
-  String tracklen;
+  char *charUTF16UTF8(const char *buf, const uint32_t len);
+  char* getTagData(char *bufData, unsigned int len);
+  bool isFrameId(const char *id, ID3FRAME frame);
+  bool isV2(ID3TAG header);
+  char *readFrameData(File file, unsigned int size);
+  ID3TAG readHeaderV2(File& file);
+  bool readV1(File& file);
+  bool readV2(File& file, ID3TAG id3);  
+  char* tagAlbum;
+  char* tagArtist;
+  char* tagTitle;
+  char* tagGenre;
+  long lenRead = 0;
   ID3TAG Tag;
   ID3TAG_EXTHEADER ExtHeader;
   ID3FRAME Frame;

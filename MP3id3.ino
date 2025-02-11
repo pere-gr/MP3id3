@@ -16,19 +16,26 @@ void setup() {
   while (!Serial) {
     ;  // wait for serial port to connect. Needed for native USB port only
   }
-  Serial.println("------------------------- Setup -----------------------------");
-
-  Serial.println(F("Initialise the SD card"));
+  delay(1000);
+  Serial.println (F("-------- MP3 Id3 tags --------\n"));
   SD.begin(BUILTIN_SDCARD);  // initialise the SD card
 
   mp3track = SD.open("file.mp3");
+
   tags.read(mp3track);
-  Serial.print(F("Artist\t"));
-  Serial.println(tags.getArtist());
-  Serial.print(F("Album\t"));
-  Serial.println(tags.getAlbum());
-  Serial.print(F("Title\t"));
-  Serial.println(tags.getTitle());
+
+  Serial.print(F("Artist:\t"));
+  Serial.println(tags.artist());
+
+  Serial.print(F("Album:\t"));
+  Serial.println(tags.album());
+
+  Serial.print(F("Title:\t"));
+  Serial.println(tags.title());
+  
+  /*Serial.print(F("Genre:\t"));
+  Serial.println(tags.genre());*/
+  Serial.println (F("\n-------- Done! --------"));
   mp3track.close();
 }
 
