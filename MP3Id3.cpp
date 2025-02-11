@@ -2,8 +2,48 @@
 #include <cstdint>
 #include <SD.h>
 
+const char *MP3Id3_genres[148] = {
+    "Blues", "Classic Rock", "Country", "Dance",
+    "Disco", "Funk", "Grunge", "Hip-Hop",
+    "Jazz", "Metal", "New Age", "Oldies",
+    "Other", "Pop", "R&B", "Rap",
+    "Reggae", "Rock", "Techno", "Industrial",
+    "Alternative", "Ska", "Death Metal", "Pranks",
+    "Soundtrack", "Euro-Techno", "Ambient", "Trip-Hop",
+    "Vocal", "Jazz+Funk", "Fusion", "Trance",
+    "Classical", "Instrumental", "Acid", "House",
+    "Game", "Sound Clip", "Gospel", "Noise",
+    "AlternRock", "Bass", "Soul", "Punk",
+    "Space", "Meditative", "Instrumental Pop", "Instrumental Rock",
+    "Ethnic", "Gothic", "Darkwave", "Techno-Industrial",
+    "Electronic", "Pop-Folk", "Eurodance", "Dream",
+    "Southern Rock", "Comedy", "Cult", "Gangsta",
+    "Top 40", "Christian Rap", "Pop/Funk", "Jungle",
+    "Native American", "Cabaret", "New Wave", "Psychadelic",
+    "Rave", "Showtunes", "Trailer", "Lo-Fi",
+    "Tribal", "Acid Punk", "Acid Jazz", "Polka",
+    "Retro", "Musical", "Rock & Roll", "Hard Rock",
+    "Folk", "Folk/Rock", "National folk", "Swing",
+    "Fast-fusion", "Bebob", "Latin", "Revival",
+    "Celtic", "Bluegrass", "Avantgarde", "Gothic Rock",
+    "Progressive Rock", "Psychedelic Rock", "Symphonic Rock", "Slow Rock",
+    "Big Band", "Chorus", "Easy Listening", "Acoustic",
+    "Humour", "Speech", "Chanson", "Opera",
+    "Chamber Music", "Sonata", "Symphony", "Booty Bass",
+    "Primus", "Porn Groove", "Satire", "Slow Jam",
+    "Club", "Tango", "Samba", "Folklore",
+    "Ballad", "Powder Ballad", "Rhythmic Soul", "Freestyle",
+    "Duet", "Punk Rock", "Drum Solo", "A Capella",
+    "Euro-House", "Dance Hall", "Goa", "Drum & Bass",
+    "Club House", "Hardcore", "Terror", "Indie",
+    "BritPop", "NegerPunk", "Polsk Punk", "Beat",
+    "Christian Gangsta", "Heavy Metal", "Black Metal", "Crossover",
+    "Contemporary C", "Christian Rock", "Merengue", "Salsa",
+    "Thrash Metal", "Anime", "JPop", "SynthPop"
+};
+
 // -------------------------------- PUBLIC
-bool MP3_Id3::read(File &file) {
+bool MP3Id3::read(File &file) {
   lenRead = 0;
   ID3TAG id3 = readHeaderV2(file);
 
@@ -13,33 +53,40 @@ bool MP3_Id3::read(File &file) {
   return readV1(file); // Read ID3 v1 data at the (end - 128) of the file.
 }
 
-bool MP3_Id3::read(char *fileName) {
+bool MP3Id3::read(char *fileName) {
   File fileTrack = SD.open(fileName);
   if (!fileTrack) { return false; }
 
   return read(fileTrack); // Read ID3 v1 data at the (end - 128) of the file.
 }
 
-char *MP3_Id3::album() {
+char *MP3Id3::album() {
   return tagAlbum;
 }
 
-char *MP3_Id3::artist() {
+char *MP3Id3::artist() {
   return tagArtist;
 }
 
-char *MP3_Id3::genre() {
+char *MP3Id3::genre() {
   return tagGenre;
 }
 
-char *MP3_Id3::title() {
+char *MP3Id3::title() {
   return tagTitle;
 }
 
+char *MP3Id3::track() {
+  return tagTrack;
+}
+
+char *MP3Id3::year() {
+  return tagYear;
+}
 // -------------------------------- PRIVATE
 
 // converts unicode in UTF-8, buff contains the string to be converted up to len
-char *MP3_Id3::charUTF16UTF8(const char *buf, const uint32_t len) {
+char *MP3Id3::charUTF16UTF8(const char *buf, const uint32_t len) {
   char b[len + 1];
   b[len] = 0;
 
@@ -101,7 +148,7 @@ char *MP3_Id3::charUTF16UTF8(const char *buf, const uint32_t len) {
         Terminated with $00 00.
     $03   UTF-8 [UTF-8] encoded Unicode [UNICODE]. Terminated with $00.
 */
-char *MP3_Id3::getTagData(char *bufData, unsigned int len) {
+char *MP3Id3::getTagData(char *bufData, unsigned int len) {
   const auto encoding = bufData[0];
   auto *s = &bufData[1];
   len--;
@@ -124,22 +171,22 @@ char *MP3_Id3::getTagData(char *bufData, unsigned int len) {
   return s;
 }
 
-bool MP3_Id3::isFrameId(const char *id, ID3FRAME frame) {
+bool MP3Id3::isFrameId(const char *id, ID3FRAME frame) {
   return (strncmp(id, frame.id, 4) == 0);
 }
 
-bool MP3_Id3::isV2(ID3TAG header){
+bool MP3Id3::isV2(ID3TAG header){
   return (strncmp(header.id, "ID3", 3) == 0);
 }
 
-char *MP3_Id3::readFrameData(File file, unsigned int size) {
+char *MP3Id3::readFrameData(File file, unsigned int size) {
   char *buf = (char *)malloc(size + 1);
   file.readBytes(buf, size);
   buf[size] = 0;
   return buf;
 }
 
-ID3TAG MP3_Id3::readHeaderV2(File &file) {
+ID3TAG MP3Id3::readHeaderV2(File &file) {
   ID3TAG id3;
   
   lenRead += file.readBytes((char *)&id3, sizeof(id3));
@@ -150,8 +197,7 @@ ID3TAG MP3_Id3::readHeaderV2(File &file) {
   return id3;
 }
 
-bool MP3_Id3::readV1(File &file) {
-  Serial.println("No ID3v2 header found");
+bool MP3Id3::readV1(File &file) {
   //v1
   TAGdata tagStruct = { 0 };
   file.seek(file.size() - 128);
@@ -160,14 +206,14 @@ bool MP3_Id3::readV1(File &file) {
       tagArtist = tagStruct.artist;
       tagAlbum = tagStruct.album;
       tagTitle = tagStruct.title;
-      tagGenre = tagStruct.genre;
+      tagGenre = tagStruct.genre >= 0 ? MP3Id3_genres[tagStruct.genre] : 0;
       return true;
     }
   }
   return false;  //Identifier v1
 }
 
-bool MP3_Id3::readV2(File &file, ID3TAG id3) {
+bool MP3Id3::readV2(File &file, ID3TAG id3) {
   //size is a "syncsafe" integer
   id3.size = __builtin_bswap32(id3.size) + 10;
 
@@ -215,14 +261,15 @@ bool MP3_Id3::readV2(File &file, ID3TAG id3) {
       tagArtist = tag;
     } else if (isFrameId("TALB", frameheader)) {
       tagAlbum = tag;
-    } /*else if (strncmp("TCON", frameheader.id, 4) == 0) {
-      char *bufData = readFrameData(file, frameheader.size);
-      tagAlbum = tagData(bufData,frameheader.size);   
-      genre = id3_getString(file, frameheader.size);
-      numTagstoFind--;
+    } else if (strncmp("TCON", frameheader.id, 4) == 0) {
+      tagGenre = tag;
     } else if (strncmp("TLEN", frameheader.id, 4) == 0) {
       //Serial.print("Found TLEN - ");
-    }*/
+    } else if (strncmp("TRCK", frameheader.id, 4) == 0) {
+      tagTrack = tag;
+    } else if (strncmp("TYER", frameheader.id, 4) == 0) {
+      tagYear = tag;
+    }
 
     lenRead += frameheader.size;
 
