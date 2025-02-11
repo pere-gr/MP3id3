@@ -12,9 +12,11 @@ Tags available right now:
 ## How to use it?
 Be sure to include SD.h and MP3id3.h and define a File variable for the file and a MP3id3 variable for this class.
 
-# Open a file and read its tags ...
+Check the .ino example.
+
+### Open a file and read its tags ...
   mp3track = SD.open("file.mp3");
   tags.read(mp3track);
 
-# ... or just use the fullpath of the file
+### ... or just use the fullpath of the file
   tags.read("folder/file.mp3");
