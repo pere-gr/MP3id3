@@ -15,15 +15,15 @@ bool MP3_Id3::read(File &file) {
     //v1
     int fileNameLength = 1024;
     int mp3TagSize = 128;
-    artist = "";
+
     TAGdata tagStruct = { 0 };
     file.seek(file.size() - 128);
     if (file.seek(file.size() - 128)) {
       file.read(reinterpret_cast<char *>(&tagStruct), 128);
       //if(!file.fail()){
-      artist = tagStruct.artist;
+      tagArtist = tagStruct.artist;
       album = tagStruct.album;
-      title = tagStruct.title;
+      tagTitle = tagStruct.title;
       genre = tagStruct.genre;
       //}
     }
@@ -61,29 +61,26 @@ bool MP3_Id3::read(File &file) {
 
     if (frameheader.id[0] == 0 || frameheader.id[1] == 0 || frameheader.id[2] == 0) {
       //Serial.println("Blank data, break");
-      numTagstoFind = 0;
       break;
     }
 
-    //Serial.printf("ID3 Frame: %c%c%c%c size:%u\n", frameheader.id[0], frameheader.id[1], frameheader.id[2] , frameheader.id[3], frameheader.size);
+    Serial.printf("ID3 Frame: %c%c%c%c size:%u\n", frameheader.id[0], frameheader.id[1], frameheader.id[2] , frameheader.id[3], frameheader.size);
 
     if (lenRead + frameheader.size >= id3.size) {
       Serial.println("End of ID3, break");
-      numTagstoFind = 0;
       break;
     }
 
     //Serial.printf("ID3 Frame: %c%c%c%c size:%u\n", frameheader.id[0], frameheader.id[1], frameheader.id[2] , frameheader.id[3], frameheader.size);
 
-    if (strncmp("TIT2", frameheader.id, 4) == 0) {
-      //Serial.print("Found TIT2 - ");
-      title = id3_getString(file, frameheader.size);
-      //Serial.print("Title ");
-      //Serial.println(title);
-      numTagstoFind--;
+    if (isFrameId("TIT2",frameheader)){
+      char *tit2 = readFrameData(file, frameheader.size);
+      tagTitle = tagData(tit2,frameheader.size);
+
     } else if (strncmp("TPE1", frameheader.id, 4) == 0) {
-      artist = id3_getString(file, frameheader.size);
-      //numTagstoFind--;
+      char *tpe1 = readFrameData(file, frameheader.size);
+      tagArtist = tagData(tpe1,frameheader.size);
+
     } else if (strncmp("TALB", frameheader.id, 4) == 0) {
       //Serial.print("Found TALB - ");
       album = id3_getString(file, frameheader.size);
@@ -116,9 +113,23 @@ end:
   return true;
 }
 
-String MP3_Id3::getArtist() {
-  return artist;
+char *MP3_Id3::readFrameData(File file, unsigned int size){
+  char *buf  = (char*)malloc(size + 1);
+  file.readBytes(buf, size);
+  buf[size] = 0;
+  Serial.print("--- readFrameData ");
+  Serial.println(buf);
+  return buf;
 }
+
+char *MP3_Id3::artist() {
+  return tagArtist;
+}
+
+char *MP3_Id3::title() {
+  return tagTitle;
+}
+
 
 String MP3_Id3::getAlbum() {
   return album;
@@ -128,9 +139,6 @@ String MP3_Id3::getGenre() {
   return genre;
 }
 
-String MP3_Id3::getTitle() {
-  return title;
-}
 
 /*
   id3_getString
@@ -143,6 +151,87 @@ String MP3_Id3::getTitle() {
         Terminated with $00 00.
     $03   UTF-8 [UTF-8] encoded Unicode [UNICODE]. Terminated with $00.
 */
+char*  MP3_Id3::tagData(char *bufData, unsigned int len) {
+  const auto encoding = bufData[0];
+  auto *s = &bufData[1];
+  len--;
+  switch (encoding) {
+    case 0x00:
+      //Serial.println("Encoding is ISO-8859-1");
+      break;
+    //          return latin1UTF8(s);
+    case 0x01:
+      //Serial.println("Encoding is UTF-16 with BOM");
+      s = charUTF16UTF8(s, len);
+      return s;
+    case 0x02:
+      //Serial.println("Encoding is UTF-16BE without BOM");
+      s = charUTF16UTF8(s, len);
+      return s;
+    case 0x03:
+      //Serial.println("Encoding is UTF-8");
+      break;
+      //          return String(s);
+  }
+
+  return s;
+}
+
+// converts unicode in UTF-8, buff contains the string to be converted up to len
+char *MP3_Id3::charUTF16UTF8(const char *buf, const uint32_t len) {
+  
+  char b[len + 1];
+  b[len] = 0;
+
+  auto *tmpbuf = (uint8_t *)malloc(len + 1);
+
+  if (!tmpbuf)
+    return {char(0)};  // out of memory;
+
+  auto *t = tmpbuf;
+  auto bitorder = false;  //Default to BE
+  auto *p = (uint16_t *)buf;
+  const auto *pe = (uint16_t *)&b[len];
+  auto code = *p;
+
+  if (code == 0xFEFF) {
+    bitorder = false;
+    p++;
+  }  // LSB/MSB
+  else if (code == 0xFFFE) {
+    bitorder = true;
+    p++;
+  }  // MSB/LSB
+
+  while (p < pe) {
+    code = *p++;
+    if (bitorder == true)
+      code = __builtin_bswap16(code);
+
+    if (code < 0X80) {
+      *t++ = code & 0xff;
+    } else if (code < 0X800) {
+      *t++ = ((code >> 6) | 0XC0);
+      *t++ = ((code & 0X3F) | 0X80);
+    } else {
+      *t++ = ((code >> 12) | 0XE0);
+      *t++ = (((code >> 6) & 0X3F) | 0X80);
+      *t++ = ((code & 0X3F) | 0X80);
+    }
+  }
+
+  *t = 0;
+
+      for (int i = 0; i < len; i++) {
+        b[i] =tmpbuf[i];
+    }
+
+  //memcpy(b, tmpbuf, len);
+  //b = tmpbuf;
+  free(tmpbuf);
+  return b;
+}
+
 static String MP3_Id3::id3_getString(File file, unsigned int len) {
   if (len > 127) len = 127;
   char buf[len + 1];
@@ -231,4 +320,8 @@ String MP3_Id3::UTF16UTF8(const char *buf, const uint32_t len) {
   out = (char *)tmpbuf;
   free(tmpbuf);
   return out;
+}
+
+bool MP3_Id3::isFrameId(const char *id, ID3FRAME frame){
+  return (strncmp(id, frame.id, 4) == 0);
 }
