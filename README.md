@@ -1,4 +1,4 @@
-# MP3id3
+# MP3Id3
 Library to retrieve id3 info from a mp3 File
 
 It's just the first code.

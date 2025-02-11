@@ -8,7 +8,7 @@
 #include "MP3id3.h"
 
 File mp3track;
-MP3_Id3 tags;
+MP3Id3 tags;
 // the setup routine runs once when you press reset:
 void setup() {
   // Open serial communications and wait for port to open:
@@ -22,6 +22,7 @@ void setup() {
 
   mp3track = SD.open("file.mp3");
 
+  Serial.println (F("Reading tags...\n"));
   tags.read(mp3track);
 
   Serial.print(F("Artist:\t"));
@@ -30,11 +31,18 @@ void setup() {
   Serial.print(F("Album:\t"));
   Serial.println(tags.album());
 
+  Serial.print(F("Track:\t"));
+  Serial.println(tags.track());
+
   Serial.print(F("Title:\t"));
   Serial.println(tags.title());
   
-  /*Serial.print(F("Genre:\t"));
-  Serial.println(tags.genre());*/
+  Serial.print(F("Year:\t"));
+  Serial.println(tags.year());
+
+  Serial.print(F("Genre:\t"));
+  Serial.println(tags.genre());
+
   Serial.println (F("\n-------- Done! --------"));
   mp3track.close();
 }
