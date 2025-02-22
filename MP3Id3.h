@@ -5,6 +5,10 @@
 #include <cstdint>
 #include <SD.h>
 
+
+#ifndef MP3Id3_h_
+#define MP3Id3_h_
+
 // https://id3.org/id3v2.4.0-structure
 
 typedef struct
